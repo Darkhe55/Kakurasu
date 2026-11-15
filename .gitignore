@@ -1,0 +1,24 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 本地输出与测试产物
+output/
+
+# 本地工具与偏好
+.commandcode/
+
+# 运行时状态（题库 data/library.json 需要提交）
+data/progress.json
+data/last-puzzle.json
+
+# 根目录临时截图，不随仓库发布
+/火狐截图*.png
+
+# 本地环境 / 系统文件
+.env
+.env.*
+*.local
+.DS_Store
+Thumbs.db
+*.log

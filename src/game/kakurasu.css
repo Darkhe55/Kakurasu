@@ -1,0 +1,87 @@
+/* ════════════════════════════════════════════════════════════════
+   方阵和（Kakurasu）—— 游戏专用皮肤
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  --kk-ink: #24231f;
+  --kk-black: #2f2b26;
+  --kk-board: #ece4d3;
+  --kk-board-line: #d4cbb9;
+}
+
+.board-svg .kk-board-bg {
+  fill: var(--kk-board);
+  stroke: var(--kk-board-line);
+  stroke-width: 1.5;
+}
+
+.board-svg .kk-cell {
+  stroke: rgba(36, 35, 31, 0.12);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.board-svg .kk-cell.empty {
+  fill: #fbf7ee;
+}
+
+.board-svg .kk-cell.white {
+  fill: #fffdf8;
+}
+
+.board-svg .kk-cell.black {
+  fill: var(--kk-black);
+  stroke: rgba(0, 0, 0, 0.35);
+}
+
+.board-svg .kk-white-dot {
+  fill: rgba(36, 35, 31, 0.18);
+  pointer-events: none;
+}
+
+.board-svg .kk-weight {
+  fill: rgba(36, 35, 31, 0.35);
+  font-family: var(--mono);
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.board-svg .kk-target {
+  fill: var(--kk-ink);
+  font-family: var(--mono);
+  font-weight: 700;
+  text-anchor: start;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.board-svg .kk-target.col {
+  text-anchor: middle;
+}
+
+.board-svg .kk-target.issue {
+  fill: var(--error);
+}
+
+.board-svg .kk-error {
+  fill: rgba(194, 59, 46, 0.12);
+  stroke: var(--error);
+  stroke-width: 2.2;
+  pointer-events: none;
+}
+
+.board-svg .cell-hit {
+  pointer-events: all;
+}
+
+.board-svg .cell-hit:hover {
+  fill: rgba(31, 111, 92, 0.16);
+}
+
+.custom-cell.v-black {
+  background: var(--kk-black);
+  border-color: var(--kk-black);
+  color: #fffdf8;
+}
