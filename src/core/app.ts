@@ -15,8 +15,9 @@ import { LogicPlayer } from './playback'
 import { CustomEditor } from './custom'
 import { flashForMove } from './fx'
 import { isMuted, resumeAudio, setMuted } from './audio'
-import { loadSavedPuzzles, savePuzzleToLibrary, type PuzzleCodec } from './library'
+import { loadSavedPuzzles, removeSavedPuzzle, savePuzzleToLibrary, type PuzzleCodec } from './library'
 import {
+  clearProgress,
   initStore,
   readLastPuzzle,
   readProgress,
@@ -75,6 +76,7 @@ export function createApp(root: HTMLElement, adapter: GameAdapter) {
           <button class="btn" id="custom-regen" type="button">生成网格</button>
         </div>
         <div class="custom-hint" id="custom-hint"></div>
+        <div class="custom-extras" id="custom-extras" hidden></div>
         <div class="custom-grid" id="custom-grid"></div>
         <div class="toolbar" style="margin-top:10px">
           <button class="btn primary" id="custom-apply" type="button">载入题板</button>
@@ -155,6 +157,8 @@ export function createApp(root: HTMLElement, adapter: GameAdapter) {
   /* ———————————————————— 会话 ———————————————————— */
 
   let session: Session | null = null
+  /** 删除二次确认中的题库条目 id */
+  let pendingDeleteId: string | null = null
   let library: Puzzle[] = [...adapter.builtinPuzzles]
 
   const codec: PuzzleCodec = {
@@ -194,11 +198,20 @@ export function createApp(root: HTMLElement, adapter: GameAdapter) {
     list.innerHTML = sortedLibrary()
       .map((p) => {
         const active = session?.puzzle.id === p.id ? ' active' : ''
+        const confirming = pendingDeleteId === p.id
+        const actions =
+          p.difficulty === 'custom'
+            ? `<button class="puzzle-act" type="button" data-edit="${p.id}" title="编辑题面">编辑</button>` +
+              `<button class="puzzle-act danger${confirming ? ' confirm' : ''}" type="button" data-del="${p.id}" title="${confirming ? '再点一次确认删除' : '从题库删除'}">${confirming ? '确认' : '×'}</button>`
+            : ''
         return `
-        <button class="puzzle-item${active}" data-id="${p.id}" type="button">
-          <span class="title">${p.name}</span>
-          <span class="meta">${p.width}×${p.height} · ${difficultyLabel(p.difficulty)}</span>
-        </button>
+        <div class="puzzle-row">
+          <button class="puzzle-item${active}" data-id="${p.id}" type="button">
+            <span class="title">${p.name}</span>
+            <span class="meta">${p.width}×${p.height} · ${difficultyLabel(p.difficulty)}</span>
+          </button>
+          ${actions}
+        </div>
       `
       })
       .join('')
@@ -208,6 +221,58 @@ export function createApp(root: HTMLElement, adapter: GameAdapter) {
         if (p) selectPuzzle(p)
       })
     })
+    list.querySelectorAll<HTMLButtonElement>('[data-edit]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.edit
+        if (!id) return
+        const puzzle = findPuzzle(id)
+        if (!puzzle || puzzle.difficulty !== 'custom') return
+        pendingDeleteId = null
+        custom.edit(puzzle)
+      })
+    })
+    list.querySelectorAll<HTMLButtonElement>('[data-del]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.del
+        if (!id) return
+        if (pendingDeleteId === id) deleteCustomPuzzle(id)
+        else {
+          pendingDeleteId = id
+          renderPuzzleList()
+        }
+      })
+    })
+  }
+
+  // 删除确认态：点其它位置取消
+  document.addEventListener('click', (e) => {
+    if (!pendingDeleteId) return
+    const target = e.target as Element | null
+    if (target?.closest('[data-del]')) return
+    pendingDeleteId = null
+    renderPuzzleList()
+  })
+
+  function deleteCustomPuzzle(id: string): void {
+    const puzzle = findPuzzle(id)
+    if (!puzzle || puzzle.difficulty !== 'custom') return
+    pendingDeleteId = null
+    custom.clearEditing(id)
+    removeSavedPuzzle(id, codec)
+    clearProgress(id)
+    refreshLibrary()
+    if (session?.puzzle.id === id) {
+      const next = sortedLibrary()[0]
+      if (next) selectPuzzle(next)
+      else {
+        session = null
+        $('#board').innerHTML = ''
+        renderPuzzleList()
+      }
+    } else {
+      renderPuzzleList()
+    }
+    setStatus(`已删除「${puzzle.name}」。`)
   }
 
   /* ———————————————————— 校验与状态 ———————————————————— */
@@ -789,6 +854,13 @@ export function createApp(root: HTMLElement, adapter: GameAdapter) {
     if (e.target instanceof HTMLInputElement) return
     // 自定义题板键盘录入优先
     if (custom.handleKey(e)) return
+    // 删除确认态：Esc 取消
+    if (e.key === 'Escape' && pendingDeleteId) {
+      e.preventDefault()
+      pendingDeleteId = null
+      renderPuzzleList()
+      return
+    }
 
     const k = e.key.toLowerCase()
     if (k === 'z' && !e.shiftKey) {

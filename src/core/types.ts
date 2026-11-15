@@ -161,6 +161,28 @@ export interface ImportSupport {
 }
 
 /** 自定义题板支持：核心提供通用编辑器，游戏只需声明「值集合」和编解码 */
+export interface CustomEditorControl {
+  readonly width: number
+  readonly height: number
+  grid(): Array<number | null>
+  setGrid(grid: Array<number | null>): void
+  setSize(width: number, height: number): void
+  rerender(): void
+  cursor(): number
+  select(index: number): void
+  message(text: string, tone?: string): void
+}
+
+export interface CustomEditorExtras {
+  html(): string
+  mount(panel: HTMLElement, ctl: CustomEditorControl): void
+  reset?(ctl: CustomEditorControl): void
+  open?(ctl: CustomEditorControl): void
+  load?(p: Puzzle, ctl: CustomEditorControl): void
+}
+
+export interface CustomAudit { ok: boolean; message: string }
+
 export interface CustomSupport {
   /**
    * 编辑器模式：
@@ -200,6 +222,13 @@ export interface CustomSupport {
     edges: Array<number | null>,
     existingId?: string,
   ): Puzzle
+
+  /** 游戏扩展面板（可选） */
+  extras?: CustomEditorExtras
+  /** 保存/载入审计（可选） */
+  audit?(puzzle: Puzzle): CustomAudit
+  /** 把题面回填编辑器（编辑自定义题用） */
+  toGrid?(p: Puzzle): { width: number; height: number; grid: Array<number | null> } | null
 
   /** 从编辑器网格构造 Puzzle（existingId 给稳定 id 用） */
   makePuzzle(w: number, h: number, grid: Array<number | null>, existingId?: string): Puzzle

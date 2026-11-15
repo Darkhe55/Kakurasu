@@ -52,39 +52,89 @@ const meta = {
   customIdPrefix: 'kakurasu-custom-',
   customMinW: 5,
   customMinH: 5,
-  customMaxW: 25,
-  customMaxH: 25,
+  customMaxW: 15,
+  customMaxH: 15,
   targetKind: 'cell' as const,
   interactionHint:
     '<kbd>左键</kbd> 空格/标点 ⇄ 黑格 · <kbd>右键</kbd> 空格/黑格 ⇄ 标点',
 }
 
-const VALUE_CYCLE: Array<number | null> = [null, BLACK, 2]
+function readTargetList(
+  id: string,
+  count: number,
+  max: number,
+  fallback: number[],
+): number[] {
+  const el = document.getElementById(id) as HTMLTextAreaElement | null
+  const raw = el?.value.trim() ?? ''
+  const vals = raw ? raw.split(/[\s,，]+/).filter(Boolean).map(Number) : []
+  const out: number[] = []
+  for (let i = 0; i < count; i++) {
+    const n = Number.isFinite(vals[i]) ? vals[i]! : fallback[i] ?? 0
+    out.push(Math.max(0, Math.min(max, Math.round(n))))
+  }
+  return out
+}
 
 const custom: CustomSupport = {
-  mode: 'none',
-  valueCycle: VALUE_CYCLE,
-  keyForDigit: (digit) => {
-    if (digit === 0) return null
-    if (digit === BLACK) return BLACK
-    return undefined
+  mode: 'cell',
+  valueCycle: [null],
+  keyForDigit: () => undefined,
+  cellLabel: () => '',
+  hint: '在下方输入行目标与列目标（空格或逗号分隔）；网格本身不用涂写。',
+
+  extras: {
+    html: () => `
+      <div class="custom-extras-grid">
+        <label>行目标（从上到下，共 h 个）
+          <textarea id="custom-row-targets" rows="2" spellcheck="false"></textarea>
+        </label>
+        <label>列目标（从左到右，共 w 个）
+          <textarea id="custom-col-targets" rows="2" spellcheck="false"></textarea>
+        </label>
+        <div class="custom-hint">行目标范围 0..w(w+1)/2，列目标范围 0..h(h+1)/2；数值会被截断到合法范围。</div>
+      </div>`,
+    mount: () => undefined,
+    reset: () => {
+      const r = document.getElementById('custom-row-targets') as HTMLTextAreaElement | null
+      const c = document.getElementById('custom-col-targets') as HTMLTextAreaElement | null
+      if (r) r.value = ''
+      if (c) c.value = ''
+    },
+    load: (p) => {
+      const kp = p as KakurasuPuzzle
+      const r = document.getElementById('custom-row-targets') as HTMLTextAreaElement | null
+      const c = document.getElementById('custom-col-targets') as HTMLTextAreaElement | null
+      if (r) r.value = (kp.rowTargets ?? []).join(' ')
+      if (c) c.value = (kp.colTargets ?? []).join(' ')
+    },
   },
-  cellLabel: (v) => (v === BLACK ? '黑' : v === 2 ? '白' : ''),
-  cellClass: (v) => (v === BLACK ? 'v-black' : ''),
-  hint: '本游戏暂不支持自定义题板。',
-  makePuzzle: (w, h, _grid, existingId) => ({
-    id: existingId ?? `${meta.customIdPrefix}${w}x${h}-${Date.now()}`,
-    name: `自定义 · ${w}×${h}`,
-    width: w,
-    height: h,
-    difficulty: 'custom',
-    rowTargets: new Array<number>(h).fill(0),
-    colTargets: new Array<number>(w).fill(0),
+
+  toGrid: (p) => ({
+    width: p.width,
+    height: p.height,
+    grid: new Array<number | null>(p.width * p.height).fill(null),
   }),
+
+  makePuzzle: (w, h, _grid, existingId) => {
+    const rowTargets = readTargetList('custom-row-targets', h, (w * (w + 1)) / 2, [])
+    const colTargets = readTargetList('custom-col-targets', w, (h * (h + 1)) / 2, [])
+    return {
+      id: existingId ?? `${meta.customIdPrefix}${w}x${h}-${Date.now()}`,
+      name: `自定义 · ${w}×${h}`,
+      width: w,
+      height: h,
+      difficulty: 'custom',
+      rowTargets,
+      colTargets,
+    } satisfies KakurasuPuzzle
+  },
+
   encodePuzzle: (p) => {
     const kp = p as KakurasuPuzzle
     return { board: encodeBoard(kp.rowTargets ?? [], kp.colTargets ?? []) }
   },
+
   decodePuzzle: (record) => {
     if (typeof record.id !== 'string') return null
     if (typeof record.width !== 'number' || typeof record.height !== 'number') return null
@@ -104,15 +154,28 @@ const custom: CustomSupport = {
       colTargets: decoded.colTargets,
     } satisfies KakurasuPuzzle
   },
+
+  audit: (p) => {
+    const kp = p as KakurasuPuzzle
+    const w = kp.width
+    const h = kp.height
+    if (w * h > 144) return { ok: true, message: '大盘面跳过唯一解校验。' }
+    const out = countSolutions(kp.rowTargets ?? [], kp.colTargets ?? [], w * h, w, h, 2, 300_000)
+    if (out.timedOut) return { ok: true, message: '唯一解校验超时，仍可保存。' }
+    if (out.count === 0) return { ok: false, message: '当前目标和无解。' }
+    if (out.count > 1) return { ok: true, message: '注意：当前目标和存在多个解。' }
+    return { ok: true, message: '唯一解 ✓。' }
+  },
 }
+
 
 function playForMove(move: Move, streak: number): void {
   if (move.to === BLACK) playDrop(streak)
   else playPluck(streak)
 }
 
-/** 导入上限：25×25（与自定义题板元数据保持一致） */
-const IMPORT_MAX_SIZE = 25
+/** 导入上限：15×15（与自定义题板元数据保持一致） */
+const IMPORT_MAX_SIZE = 15
 
 /** 回溯确认有解的最大盘面：再大回溯成本不可控，只做规则引擎校验 */
 const IMPORT_SEARCH_MAX_SIZE = 12
