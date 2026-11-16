@@ -62,6 +62,28 @@ npm start
 
 识别结果会以表格列出，可逐格手动修正后再入库。识别依赖数字是**彩色（蓝色）**、且截图包含完整网格；黑白截图请用文本导入。
 
+命令行同样可以识别并写入题库（与面板共用 `src/game/image-import.ts`）：
+
+```bash
+# 只识别、预览行列数字（默认不写盘）
+npm run import-image -- month.png
+
+# 校验后写入 data/library.json
+npm run import-image -- month.png --name "图片导入 · 十二阶" --append
+
+# 更严格的唯一解校验；人工修正：r3=62 改第 3 行，c5=39 改第 5 列（1 基）
+npm run import-image -- month.png --verify --map r3=62,c5=39 --append
+```
+
+| 参数 | 说明 |
+|------|------|
+| `--name 名称` / `--id ID` | 题库名称 / 指定 id（覆盖同 id 条目） |
+| `--append` | 写入 `data/library.json`；不加只预览 |
+| `--verify` | 唯一解校验（小盘面回溯；`--allow-multi` 可放宽） |
+| `--map 修正` | `r3=62` 改行目标、`c5=39` 改列目标 |
+| `--max-nodes N` | 回溯搜索节点上限 |
+| `--out FILE` / `--json` | 题库文件 / 机器可读输出 |
+
 ## 数据存放
 
 运行 `npm start` / `npm run dev` 时，题库、进度和上次题目保存在项目内 `data/` 目录；静态部署时自动降级到浏览器 localStorage。
@@ -116,5 +138,6 @@ npm run build     # tsc --noEmit + vite build
 npm run gen       # 重新生成题库
 npm run check     # 审计题库
 npm run verify    # 参考解、逻辑回放与交互验证
+npm run import-image  # 图片识别导入（预览 / --append / --verify / --map）
 npm run audit     # 逐题审计逻辑解题
 ```

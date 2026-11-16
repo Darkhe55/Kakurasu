@@ -17,6 +17,7 @@
     "check": "node scripts/check.mjs",
     "ui-check": "node scripts/ui-check.mjs",
     "verify": "node scripts/verify-game.mjs",
+    "import-image": "node scripts/import-image.mjs",
     "audit": "node scripts/audit-logic.mjs"
   },
   "devDependencies": {
