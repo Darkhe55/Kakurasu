@@ -115,12 +115,29 @@ if (afterUndo.changed !== 0) {
   console.error('FAIL: 撤销没有回到空盘')
 }
 
-const customDisabled = await page.locator('#btn-custom').isDisabled()
-console.log('custom disabled:', customDisabled)
-if (!customDisabled) {
+const customEnabled = !(await page.locator('#btn-custom').isDisabled())
+console.log('custom enabled:', customEnabled)
+if (!customEnabled) {
   failures++
-  console.error('FAIL: 方阵和 应关闭自定义题板')
+  console.error('FAIL: 方阵和 应支持自定义题板（行列目标）')
 }
+await page.click('#btn-custom')
+await page.waitForSelector('#custom-editor:not([hidden])')
+const customState = await page.evaluate(() => {
+  const extras = document.querySelector('#custom-extras')
+  return {
+    cells: document.querySelectorAll('#custom-grid .custom-cell').length,
+    extrasVisible: !!extras && !extras.hidden,
+    hasRowTargets: !!document.getElementById('custom-row-targets'),
+    hasColTargets: !!document.getElementById('custom-col-targets'),
+  }
+})
+console.log('custom editor:', customState)
+if (customState.cells === 0 || !customState.extrasVisible || !customState.hasRowTargets || !customState.hasColTargets) {
+  failures++
+  console.error('FAIL: 方阵和 自定义题板（行 / 列目标输入）没有正确挂载')
+}
+await page.click('#custom-close')
 
 await page.screenshot({ path: 'output/playwright/05-verified.png', fullPage: true })
 console.log('pageErrors:', errors)

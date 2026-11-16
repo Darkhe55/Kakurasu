@@ -52,8 +52,8 @@ const meta = {
   customIdPrefix: 'kakurasu-custom-',
   customMinW: 5,
   customMinH: 5,
-  customMaxW: 15,
-  customMaxH: 15,
+  customMaxW: 20,
+  customMaxH: 20,
   targetKind: 'cell' as const,
   interactionHint:
     '<kbd>左键</kbd> 空格/标点 ⇄ 黑格 · <kbd>右键</kbd> 空格/黑格 ⇄ 标点',
@@ -174,8 +174,8 @@ function playForMove(move: Move, streak: number): void {
   else playPluck(streak)
 }
 
-/** 导入上限：15×15（与自定义题板元数据保持一致） */
-const IMPORT_MAX_SIZE = 15
+/** 导入上限：20×20（与自定义题板元数据保持一致） */
+const IMPORT_MAX_SIZE = 20
 
 /** 回溯确认有解的最大盘面：再大回溯成本不可控，只做规则引擎校验 */
 const IMPORT_SEARCH_MAX_SIZE = 12
