@@ -402,6 +402,7 @@ export function createApp(root: HTMLElement, adapter: GameAdapter) {
         const el = currentSvg()
         if (!el) return
         e.preventDefault()
+        e.stopPropagation()
         const vb = clientToViewBox(el, e.clientX, e.clientY)
         const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12
         view.setZoom(view.zoom * factor, vb ?? undefined)
